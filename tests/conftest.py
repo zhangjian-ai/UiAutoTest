@@ -1,7 +1,7 @@
 import pytest
 from selenium import webdriver
 
-from DataSource.LoadData import LoadData
+from utils.suport.LoadData import LoadData
 from utils import BASE_DIR
 from utils.operation.file import get_case_id
 from utils.testing.assemble import build_test_data

@@ -1,4 +1,4 @@
-from PageObject.crm.PageObject import LoginPage
+from PageObject.crm import LoginPage
 
 
 def test_login(driver, data):

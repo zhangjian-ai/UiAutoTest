@@ -1,6 +1,6 @@
 import re
 
-from DataSource import LoadData
+from utils.suport.LoadData import LoadData
 
 
 def build_test_data(request):

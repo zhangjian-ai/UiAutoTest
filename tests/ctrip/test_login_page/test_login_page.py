@@ -1,4 +1,4 @@
-from PageObject.ctrip.PageObject import LoginPage
+from PageObject.ctrip import LoginPage
 
 
 def test_login(driver, data):

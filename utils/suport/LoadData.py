@@ -1,5 +1,6 @@
 import os
 
+from utils import BASE_DIR
 from utils.operation.file import load_json
 
 
@@ -8,7 +9,7 @@ class LoadData:
 
     @classmethod
     def load_local(cls):
-        path = os.path.dirname(os.path.abspath(__file__))
+        path = os.path.join(BASE_DIR, "DataSource")
 
         for path, _, files in os.walk(path):
             for file in files:
