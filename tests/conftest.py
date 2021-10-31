@@ -1,19 +1,26 @@
 import pytest
-from selenium import webdriver
 
-from utils.suport.LoadData import LoadData
-from utils import BASE_DIR
+from utils.support.load import *
 from utils.operation.file import get_case_id
 from utils.testing.assemble import build_test_data
 
 
-def pytest_sessionstart(session):
-    # 初始化加载测试数据
-    LoadData.load_local()
-
-
 def pytest_addoption(parser):
     parser.addoption("--browser", action="store", type=str, default="chrome", help="测试使用的浏览器类型")
+
+
+def pytest_sessionstart(session):
+    # 初始化加载测试数据
+    Data.load_local()
+    # 初始化driver
+    browser = session.config.getoption("browser")
+    Driver(browser)
+
+
+def pytest_sessionfinish(session):
+    # 关闭浏览器
+    Driver.Driver.close()
+    Driver.Driver.quit()
 
 
 def pytest_generate_tests(metafunc):
@@ -33,28 +40,6 @@ def pytest_generate_tests(metafunc):
     for fixture in fixtures:
         if fixture in ('data',):  # 维护需要参数化的夹具
             metafunc.parametrize(fixture, ids, indirect=True)
-
-
-@pytest.fixture(scope="session")
-def driver(request):
-    """
-    根据配置返回需要的driver对象
-    :param request:
-    :return: driver
-    """
-    browser_type = request.config.getoption("browser")
-
-    if browser_type == "chrome":
-        # 浏览器后台运行模式
-        chrome_options = webdriver.ChromeOptions()
-        chrome_options.add_argument('--headless')
-
-        driver = webdriver.Chrome(executable_path=rf"{BASE_DIR}/libs/chromedriver", options=chrome_options)
-        yield driver
-
-        # 关闭网页及浏览器
-        driver.close()
-        driver.quit()
 
 
 @pytest.fixture()

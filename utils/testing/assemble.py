@@ -1,6 +1,6 @@
 import re
 
-from utils.suport.LoadData import LoadData
+from utils.support.load import Data
 
 
 def build_test_data(request):
@@ -13,7 +13,7 @@ def build_test_data(request):
     project_name = re.findall("tests/(\w+?)/", request.module.__file__)[0]
 
     # 读取测试数据
-    return LoadData.Data[project_name][case_id]
+    return Data.Data[project_name][case_id]
 
 
 

@@ -2,33 +2,49 @@
 import time
 
 from selenium.common.exceptions import TimeoutException
+from selenium.webdriver import ActionChains
+from selenium.webdriver.remote.webelement import WebElement
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 
+from utils.support.load import Driver
+
 
 class BasePage:
-    def __init__(self, driver):
-        self.driver = driver
+    def __init__(self, driver=None):
+        self.driver = driver if driver else Driver.Driver
+        self.chains = ActionChains(self.driver)
 
-    def verify(self, type, value):
+    def verify(self, method, value):
         """
         验证测试结果
-        :param type: 验证方式。title, element, text, url
+        :param method: 验证方式。title, element, text, url
         :param value: 验证文本
         :return:
         """
-        self.wait = WebDriverWait(self.driver, 5)
-
-        if type == "title":
+        if method == "title":
             time.sleep(2)
             assert value in self.driver.title, self.driver.title
-        if type == "element":
+        if method == "element":
             try:
-                self.wait.until(EC.presence_of_element_located(getattr(self, value)))
-            except TimeoutException:
-                assert False, str(TimeoutException)
+                assert isinstance(self.wait_until_presence(getattr(self, value)), WebElement)
             except AttributeError:
                 assert False, f"PageObject中没有名为 {value} 的元素，请检查对应的Elements类"
+
+    def wait_until_presence(self, location, timeout=10):
+        """
+        等待元素，直到被定位的元素出现，默认超时时间10s
+        :param location: 被等待的元素的定位信息
+        :param timeout: 超时时间
+        :return: 元素对象
+        """
+        wait = WebDriverWait(self.driver, timeout)
+        try:
+            wait.until(EC.presence_of_element_located(location))
+        except TimeoutException:
+            assert False, f"元素 {location} 定位超时"
+
+        return self.find_element(location)
 
     def get(self, url):
         """
@@ -37,6 +53,14 @@ class BasePage:
         :return:
         """
         self.driver.get(url)
+
+    def size(self, location):
+        """
+        获取元素在界面上的尺寸
+        :param location:
+        :return: dict: {"height": 100, "width":100}
+        """
+        return self.find_element(location).size
 
     def find_element(self, location):
         """
@@ -62,3 +86,13 @@ class BasePage:
         :return:
         """
         self.find_element(location).click()
+
+    def drag_and_drop_by_offset(self, source, xoffset=0, yoffset=0):
+        """
+        拖拽元素到某个位置后松开
+        :param source: 拖动的元素对象
+        :param xoffset:
+        :param yoffset:
+        :return: self
+        """
+        self.chains.drag_and_drop_by_offset(source, xoffset, yoffset).perform()

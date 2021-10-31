@@ -1,8 +1,8 @@
-from PageObject.crm import LoginPage
+from Page.crm import LoginPage
 
 
-def test_login(driver, data):
-    page = LoginPage(driver)
+def test_login(data):
+    page = LoginPage()
     page.login(data['email'], data['password'], data['code'])
 
     page.verify(*data['expect'])

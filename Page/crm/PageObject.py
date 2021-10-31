@@ -1,8 +1,9 @@
 from Base import BasePage
-from PageObject.crm.elements import *
+from utils.support.singleton import Singleton
+from .elements import *
 
 
-class LoginPage(BasePage, LoginPageElements, HomePageElements):
+class LoginPage(BasePage, LoginPageElements, HomePageElements, metaclass=Singleton):
     """登录页面"""
 
     # 业务操作
