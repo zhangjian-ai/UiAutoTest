@@ -8,9 +8,10 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 
 from utils.support.load import Driver
+from utils.support.singleton import Singleton
 
 
-class BasePage:
+class BasePage(metaclass=Singleton):
     def __init__(self, driver=None):
         self.driver = driver if driver else Driver.Driver
         self.chains = ActionChains(self.driver)
