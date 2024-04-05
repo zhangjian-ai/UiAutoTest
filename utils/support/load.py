@@ -30,4 +30,7 @@ class Driver:
             chrome_options = webdriver.ChromeOptions()
             chrome_options.add_argument('--headless')
 
-            Driver.Driver = webdriver.Chrome(executable_path=rf"{BASE_DIR}/libs/chromedriver", options=chrome_options)
+            driver = webdriver.Chrome(executable_path=rf"{BASE_DIR}/libs/chromedriver", options=chrome_options)
+            driver.set_network_conditions()
+
+

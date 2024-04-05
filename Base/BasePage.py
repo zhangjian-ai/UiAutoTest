@@ -88,12 +88,12 @@ class BasePage(metaclass=Singleton):
         """
         self.find_element(location).click()
 
-    def drag_and_drop_by_offset(self, source, xoffset=0, yoffset=0):
+    def drag_and_drop_by_offset(self, source, x_offset=0, y_offset=0):
         """
         拖拽元素到某个位置后松开
         :param source: 拖动的元素对象
-        :param xoffset:
-        :param yoffset:
+        :param x_offset:
+        :param y_offset:
         :return: self
         """
-        self.chains.drag_and_drop_by_offset(source, xoffset, yoffset).perform()
+        self.chains.drag_and_drop_by_offset(source, x_offset, y_offset).perform()
