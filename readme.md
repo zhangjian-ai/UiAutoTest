@@ -12,8 +12,8 @@
 
 PO模式可以把一个页面分为三层，对象库层、操作层、业务层。
 
-- 对象库层：封装定位元素的方法。
-- 操作层：封装对元素的操作。
+- 对象层：每个页面封装为一个类，属性是页面上的元素。
+- 操作层：封装对页面、元素的操作，形成一个或多个操作类。
 - 业务层：将一个或多个操作组合起来完成一个业务功能。比如登录：需要输入帐号、密码、点击登录三个操作。
 
 
@@ -33,6 +33,8 @@ PO模式可以把一个页面分为三层，对象库层、操作层、业务层
 ## Selenium
 
 > 以下所有示例，均已Chrome浏览器为例
+>
+> Selenium 适用于常规的web ui
 
 
 
@@ -70,7 +72,9 @@ options.add_experimental_option('prefs', prefs)
 # 隐藏window.navigator.webdriver特征参数 （有时候能反爬）
 option.add_experimental_option('excludeSwitches', ['enable-automation'])
 
-driver = webdriver.Chrome(options=chromeOptions)
+# 创建driver时指定驱动程序。也可以将驱动程序配置到系统环境变量就可无需指定
+# 注意：在新版中 executable_path 已被移除，使用Service实例来替换驱动路径
+driver = webdriver.Chrome(options=chromeOptions, executable_path="libs/chromedriver")
 ```
 
 
@@ -386,3 +390,12 @@ select.select_by_visible_text(text) # 以text文本值来查找匹配的元素�
 select.first_selected_option() # 选择第一个option选项；
 ```
 
+
+
+
+
+## Airtest&Poco
+
+> 对于app的ui自动化，目前推荐 Airtest&Poco 两个库组合使用。相较于传统的 appium，其对元素的操作以及定位都更简单已用，且对于各端（android、ios、win、mac）都有较好的适配
+
+此处提供官方文档以供学习：https://www.bookstack.cn/read/Airtest-1.2-zh/Home.md
