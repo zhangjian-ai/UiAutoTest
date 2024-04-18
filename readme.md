@@ -1,3 +1,7 @@
+本项目介绍UI自动化测试相关的技术栈。覆盖Web和客户端(ios、android、windows、Mac 等)。
+
+
+
 ## PO模式简介
 
 > PO模型是:Page Object Model的简写 页面对象模型
@@ -399,3 +403,5 @@ select.first_selected_option() # 选择第一个option选项；
 > 对于app的ui自动化，目前推荐 Airtest&Poco 两个库组合使用。相较于传统的 appium，其对元素的操作以及定位都更简单已用，且对于各端（android、ios、win、mac）都有较好的适配
 
 此处提供官方文档以供学习：https://www.bookstack.cn/read/Airtest-1.2-zh/Home.md
+
+项目中提供airtest&poco的使用演示
