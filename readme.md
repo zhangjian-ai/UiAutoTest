@@ -402,6 +402,198 @@ select.first_selected_option() # 选择第一个option选项；
 
 > 对于app的ui自动化，目前推荐 Airtest&Poco 两个库组合使用。相较于传统的 appium，其对元素的操作以及定位都更简单已用，且对于各端（android、ios、win、mac）都有较好的适配
 
-此处提供官方文档以供学习：https://www.bookstack.cn/read/Airtest-1.2-zh/Home.md
+学习文档：https://www.bookstack.cn/read/Airtest-1.2-zh/Home.md
 
-项目中提供airtest&poco的使用演示
+
+
+### Android
+
+对于安卓设备，airtest自带了各个系统版本的ADB工具，因此只要安卓设备连接到操作系统，并且手机打开了开发者选项，那么就可以直接使用 AirtestIDE 工具，以及运行测试脚本。
+
+在学习文档中，较为详细的介绍了如何使用airtest&poco，可以轻松实现设备连接、脚本调试，比较有特点是的可以实现步骤级别的截屏以及录屏。
+
+
+
+### IOS
+
+相较于android设备的测试就复杂了许多，android设备可以借助adb直接实现应用的启停，也就可以在测试时同步启动android设备上的PocoService（手机端的代理服务，测试脚本必须借助代理服务才能实现在设备界面的测试操作），轻松实现自动化测试。
+
+对于ios，airtest的支持也不尽人意（ios-Tagent），对于ios和xcode的版本都有严重限制。但好消息是，新版本的airtest已经对appium的WebDriverAgent（WDA）有了较好的支持，详情可见：https://www.bookstack.cn/read/Airtest-1.2-zh/51422283f532b257.md
+
+
+
+#### 安装WDA
+
+注意，给ios设备安装WDA需要借助Mac电脑以及xcode工具，通过源码安装的方式安装程序。
+
+1. clone 源码到本地：https://github.com/appium/WebDriverAgent.git
+
+2. 进入项目目录，双击启动文件WebDriverAgent.xcodeproj，将在xocde中打开项目
+
+3. 进入菜单，选择 Product > Scheme > WebDriverAgentRunner
+
+4. 进入菜单，选择 Product > Destination > 连接的手机。在 `iOS Device` 分类下，是我们自己的设备
+
+5. 在xcode界面，右侧 TARGETS 选择 WebDriverAgentRunner
+
+6. 选中 Signing&Capabilities tab页面 
+
+   1. 勾选Automatically manage signing
+   2. Team中选择自己的 Apple开发帐号。如果是个人，那么登录Apple ID，就可以使用Personal Team
+   3. 将 Bundle Identifier修改为：com.glaxxx.WebDriverAgentRunner。注意这里的 xxx 是用户自定义的包名
+
+7. 选中 Build Settings tab页面，Packaging 中的 Product Bundle Identifier修改为：com.glaxxx.WebDriverAgentRunner
+
+8. 进入菜单，点击 Product > Test ，这将执行源码安装流程，为设备安装WebDriverAgent
+
+   > 主要注意的是，安装完成后，默认会启动agent，但首次通常会失败
+   >
+   > 其原因是个人Team是不被信任的，需要在手机 设置 > 通用 > VPN与设备管理 中信任开发者
+   >
+   > 再次运行agent，还会再让输入锁屏密码
+   >
+   > 这些操作完成后，再次运行 Test ，就会成功启动WDA
+
+9. 成功启动WDA后，就可以在同一网段访问到WDA启动的代理服务，在xcode启动的WDA，在控制台就可以看到链接地址
+
+   <img src="./_static/images/ui_test01.png" style="width:75%;float: left">
+
+10. 至此，WebDriverAgent 就安装完成了
+
+
+
+#### tidevice
+
+在实际测试工程中，测试设备通常在机房统一管理，但是从前面WDA安装过程可以看到，我们需要使用xcode来启动WDA，这样就失去了自动化测试的意义。出于这样的需求，阿里开源了1个用来做iOS自动化的工具-- tidevice ，官称该工具能实现 **不依赖 xcode 启动 WebDriverAgent** 完成设备连接。
+
+> iOS 16的手机需要手工开启开发者选项。 
+>
+> 开启方法：设置->隐私与安全性->开发者模式 （打开），然后会提示重启 （点击 重新启动） -> 启动后会弹窗 是否打开“开发者模式”？（点击打开）
+
+- 安装tidevice
+
+  目前 tidevice 库仅支持安装在 **python3.7及以上版本** 中
+
+  ```shell
+  pip3 install tidevice
+  ```
+
+- 常用命令
+
+  查看已连接设备: `tidevice list`
+
+  ```shell
+  % tidevice list
+  UDID                       SerialNumber    NAME        MarketName    ProductVersion    ConnType
+  00008101-xxxx  FFX***YJ    iPhone (3)  iPhone 12     16.3.1            usb
+  ```
+
+  查看设备上第三方的应用名: `tidevice -u UDID applist`
+
+  如果当前只连接了一台设备，那么可以省略 -u 参数
+
+  ```shell
+  % tidevice -u 00008101-xxxx applist
+  
+  com.tencent.qqmail QQ邮箱 6.5.3
+  com.ss.iphone.ugc.Aweme 抖音 29.8.0
+  com.alipay.iphoneclient 支付宝 10.3.50
+  ```
+
+  安装 .ipa 包: `tidevice -u UDID install 包路径`
+
+  ```shell
+  # $UDID可以使用tidevice list命令查看
+  tidevice -u $UDID  install D:/test.ipa
+  
+  # 或者
+  tidevice -u $UDID install https://example.org/example.ipa
+  ```
+
+  其他常用命令：
+
+  ```shell
+  # 卸载应用
+  tidevice uninstall com.example.demo
+  
+  # 启动应用
+  tidevice launch com.example.demo
+  
+  # 停止应用
+  tidevice kill com.example.demo
+  
+  # 查看运行中的应用
+  tidevice ps
+  tidevice ps --json output as json
+  ```
+
+  更多详细的功能可以查看 tidevice 的github文档：https://github.com/alibaba/taobao-iphone-device
+
+- 运行 XCTest（Xcode Test）
+
+  在此之前，需保证设备已经安装了AWD
+
+  查看设备上WDA的BundleID:
+
+  ```shell
+  % tidevice -u 00008101-00112CCA3AE0001E applist | grep 'WebDriverAgent'
+  com.glaxxx.WebDriverAgentRunner.xctrunner WebDriverAgentRunner-Runner 1.0  # 第一列包名就是 BundleID
+  ```
+
+  指定BundleID启动应用：
+
+  ```shell
+  # 命令启动后，需要保持窗口。否则会中断连接
+  % tidevice xctest -B com.glaxxx.WebDriverAgentRunner.xctrunner
+  
+  [I 240512 15:40:04 _device:1064] Start execute test plan with IDE version: 29
+  [I 240512 15:40:04 _device:950] 2024-05-12 15:39:55.755581+0800 WebDriverAgentRunner-Runner[63406:6875081] ServerURLHere->http://169.254.232.246:8100<-ServerURLHere  # 设备上的代理服务地址，在同一网段中可以直接访问
+  [I 240512 15:40:04 _device:951] WebDriverAgent start successfully
+  ```
+
+  上面启动的wda必须要求测试脚本运行所在的网络与设备网络在同一个网段，才能访问到设备上的代理服务，使用起来就不太方便。
+
+  因此，再介绍一个启动方式，这个方式会在当前执行tidevice命令的机器上再提供一个代理服务（当前操作系统代理设备上的代理服务），并且可以指定端口号，这使得测试脚本无需关心设备代理服务的访问地址，就可以使用 localhost 操作设备:
+
+  ```shell
+  % tidevice wdaproxy -B com.glazhangjian.WebDriverAgentRunner.xctrunner --port 8190
+  
+  [I 240512 15:54:14 _device:951] WebDriverAgent start successfully
+  ```
+
+  使用 AirtestIDE 就可以成功连接到设备:
+
+  <img src="./_static/images/ui_test02.png" style="width:60%;float: left">
+
+  
+
+  
+
+  
+
+  
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

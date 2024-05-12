@@ -1,2 +1,3 @@
-pytest~=8.1.1
-airtest~=1.3.3
+airtest==1.3.3
+poco==0.99.1
+pytest==8.1.1
