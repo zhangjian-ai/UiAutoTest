@@ -440,7 +440,7 @@ select.first_selected_option() # 选择第一个option选项；
 
    1. 勾选Automatically manage signing
    2. Team中选择自己的 Apple开发帐号。如果是个人，那么登录Apple ID，就可以使用Personal Team
-   3. 将 Bundle Identifier修改为：com.glaxxx.WebDriverAgentRunner。注意这里的 xxx 是用户自定义的包名
+   3. 将 Bundle Identifier修改为：com.xxx.WebDriverAgentRunner。**注意这里的 xxx 是用户自定义的包名**
 
 7. 选中 Build Settings tab页面，Packaging 中的 Product Bundle Identifier修改为：com.glaxxx.WebDriverAgentRunner
 
@@ -537,14 +537,14 @@ select.first_selected_option() # 选择第一个option选项；
 
   ```shell
   % tidevice -u 00008101-00112CCA3AE0001E applist | grep 'WebDriverAgent'
-  com.glaxxx.WebDriverAgentRunner.xctrunner WebDriverAgentRunner-Runner 1.0  # 第一列包名就是 BundleID
+  com.xxx.WebDriverAgentRunner.xctrunner WebDriverAgentRunner-Runner 1.0  # 第一列包名就是 BundleID
   ```
 
   指定BundleID启动应用：
 
   ```shell
   # 命令启动后，需要保持窗口。否则会中断连接
-  % tidevice xctest -B com.glaxxx.WebDriverAgentRunner.xctrunner
+  % tidevice xctest -B com.xxx.WebDriverAgentRunner.xctrunner
   
   [I 240512 15:40:04 _device:1064] Start execute test plan with IDE version: 29
   [I 240512 15:40:04 _device:950] 2024-05-12 15:39:55.755581+0800 WebDriverAgentRunner-Runner[63406:6875081] ServerURLHere->http://169.254.232.246:8100<-ServerURLHere  # 设备上的代理服务地址，在同一网段中可以直接访问
@@ -556,7 +556,7 @@ select.first_selected_option() # 选择第一个option选项；
   因此，再介绍一个启动方式，这个方式会在当前执行tidevice命令的机器上再提供一个代理服务（当前操作系统代理设备上的代理服务），并且可以指定端口号，这使得测试脚本无需关心设备代理服务的访问地址，就可以使用 localhost 操作设备:
 
   ```shell
-  % tidevice wdaproxy -B com.glazhangjian.WebDriverAgentRunner.xctrunner --port 8190
+  % tidevice wdaproxy -B com.xxx.WebDriverAgentRunner.xctrunner --port 8190
   
   [I 240512 15:54:14 _device:951] WebDriverAgent start successfully
   ```
