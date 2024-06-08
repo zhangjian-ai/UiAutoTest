@@ -3,7 +3,7 @@ import json
 import pytest
 import platform
 
-from framework import OUTPUT
+from framework import TMPDIR
 
 
 def set_env_to_report():
@@ -17,7 +17,7 @@ def set_env_to_report():
         'PytestVersion': pytest.__version__,
         'Platform': platform.platform()
     }
-    allure_env_file = os.path.join(OUTPUT, 'environment.properties')
+    allure_env_file = os.path.join(TMPDIR, 'environment.properties')
     with open(allure_env_file, 'w', encoding='utf-8') as f:
         for k, v in allure_env.items():
             f.write(k + "=" + v + "\n")
@@ -34,7 +34,7 @@ def set_executor_to_report():
         "buildName": "APP TEST",
         "reportName": "TestReport"
     }
-    allure_env_file = os.path.join(OUTPUT, 'executor.json')
+    allure_env_file = os.path.join(TMPDIR, 'executor.json')
     with open(allure_env_file, 'w', encoding='utf-8') as f:
         f.write(json.dumps(allure_executor, ensure_ascii=False, indent=4))
 
@@ -62,7 +62,7 @@ def set_categories_to_report():
             "matchedStatuses": ["skipped"]
         }
     ]
-    allure_env_file = os.path.join(OUTPUT, 'categories.json')
+    allure_env_file = os.path.join(TMPDIR, 'categories.json')
     with open(allure_env_file, 'w', encoding='utf-8') as f:
         f.write(json.dumps(categories, ensure_ascii=False, indent=4))
 

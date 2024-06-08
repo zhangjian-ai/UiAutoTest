@@ -1,3 +1,4 @@
+from airtest.utils.snippet import parse_device_uri
 from poco.pocofw import Poco
 from _pytest.config import Config
 from poco.proxy import UIObjectProxy
@@ -5,116 +6,132 @@ from poco.drivers.ios import iosPoco
 from airtest.core.api import connect_device
 from poco.drivers.android.uiautomation import AndroidUiautomationPoco
 
+from framework.schedule import Node
 
-class CoordinateProxy:
+
+class ElementProxy:
     """
-    坐标代理
-    因为坐标不能通过poco构建UIObjectProxy实例，故实现本代理类
+    元素代理，用于构建元素库
+    可自定义扩展
+    处理逻辑基于Poco
     """
 
-    def __init__(self, coordinate: list or tuple):
+    def __init__(self, name: str = None, text: str = None, coordinate: tuple or list = None):
         """
-        坐标通常相对于屏幕左上角
-        :param coordinate: [x, y]
+        :param name: 元素name属性值，基于Poco
+        :param text: 元素text属性值，基于Poco
+        :param coordinate: 元素坐标，对于不能使用控件定位的元素，通常使用坐标来实现对元素的操作
         """
+        if not name and not text and not coordinate:
+            raise RuntimeError("实例化参数至少提供一个: name text coordinate")
 
-        if len(coordinate) != 2:
-            raise RuntimeError("坐标信息错误")
+        if coordinate and not isinstance(coordinate, (tuple, list)):
+            raise RuntimeError("coordinate 参数数据类型错误")
 
-        self.__poco: Poco
-        self.coordinate = coordinate
+        self.name = name
+        self.text = text
+        self.coordinate = tuple(coordinate)
 
-    def __call__(self, poco: Poco):
+    def __call__(self, poco: Poco) -> UIObjectProxy or tuple:
         """
-
+        允许用户直接调用元素代理
+        如果是坐标，则返回
         :param poco:
         :return:
         """
 
-        self.__poco = poco
-        return self
+        if self.name or self.text:
+            return poco(name=self.name, text=self.text)
 
-    def click(self):
+        return self.coordinate
+
+    def click(self, poco: Poco):
         """
-        坐标点击
-        :return:
-        """
-
-        width, height = self.__poco.get_screen_size()
-        self.__poco.click((self.coordinate[0] / width, self.coordinate[1] / height))
-
-
-class ControlProxy:
-    """
-    控件代理
-    """
-
-    def __init__(self, control: dict):
-        """
-        :param control: 控件信息，例如：{"name": "submit", "text": "提交"}
-        """
-        self.control: dict = control
-
-    def __call__(self, poco: Poco) -> UIObjectProxy:
-        """
-        允许用户直接调用代理对象
+        单次点击操作
         :param poco:
         :return:
         """
 
-        return poco(**self.control)
+        if self.name or self.text:
+            poco(name=self.name, text=self.text).click()
+            return
+
+        width, height = poco.get_screen_size()
+        poco.click((self.coordinate[0] / width, self.coordinate[1] / height))
+
+    # TODO 扩展其他元素操作方法
 
 
-class PocoProxy:
+class PocoMixin:
     """
-    实现对多Poco实例进行管理
-    目标：支持用例并行，且实现执行步骤与 poco(device) 解耦
+    poco扩展类
     """
 
-    __slots__ = ["config", "pool"]
+    def __init__(self, config: Config):
+        # 游标。表示当前设备对应poco实例在 poco-pool 中的索引
+        self.cursor = 0
 
-    def __init__(self, remotes: list, config: Config):
+        # poco-pool
+        self.poco_pool = []
+
+        # node  负责和manager控制节点通信，来获取某个设备的使用权
+        self.node = Node(config=config)
+
+    def switch_to(self, os: str = None, sn: str = None):
         """
-        创建设备连接，并为之初始poco
-        :param remotes: 设备连接地址列表
-        :param config: pytestconfig
-        """
-        self.config = config
-
-        # 根据os来创建对应的poco
-        self.pool = []
-        for remote in remotes:
-            device = connect_device(remote)
-            os = device.__class__.__name__.lower()
-
-            if os == "android":
-                poco = AndroidUiautomationPoco(device=device,
-                                               screenshot_each_action=False,
-                                               use_airtest_input=True,
-                                               pre_action_wait_for_appearance=10)
-            elif os == "ios":
-                poco = iosPoco(device=device, pre_action_wait_for_appearance=10)
-            else:
-                raise RuntimeError("不支持的设备及操作系统")
-
-            self.pool.append({
-                "poco": poco,
-                "dev_id": remote.get("id", "1949"),
-                "os": os
-            })
-
-    def device_hold(self):
-        """
-        根据默认设备信息，占用现有设备
-        用例级别占用
-        注意：这里的占用是指用例执行时，在可用设备中锁定一个设备，避免其他用例在同一设备上执行
-        :return:
+        持有目标设备
+        需要注意的时，使用本代理之前，必须先调用本方法
+        :param os: 系统 android/ios/win/mac
+        :param sn: 设备序列号
+        :return: None
         """
 
-    def is_distributed(self):
-        """
-        判断当前测试进程是否是分布式执行
-        :return:
-        """
+        if not os and not sn:
+            raise RuntimeError("可选参数必须提供一个: os sn")
 
-        return hasattr(self.config.option, "dist") and self.config.option.dist != "no"
+        # 先看是否已经持有了目标设备
+        for i, poco in enumerate(self.poco_pool):
+            if poco["sn"] == sn or poco["os"] == os:
+                self.cursor = i
+                return
+
+        # 如果当前没有设备就通过 node 获取一个
+        uri = self.node.hold(os=os, sn=sn)
+
+        # 创建poco并保存
+        platform, uuid, params = parse_device_uri(uri)
+        platform = platform.lower()
+
+        if platform == "android":
+            poco = AndroidUiautomationPoco(device=connect_device(uri),
+                                           screenshot_each_action=False,
+                                           use_airtest_input=True,
+                                           pre_action_wait_for_appearance=10)
+        elif os == "ios":
+            poco = iosPoco(device=connect_device(uri), pre_action_wait_for_appearance=10)
+        else:
+            raise RuntimeError("不支持的设备及操作系统")
+
+        self.poco_pool.append({"poco": poco, "os": platform, "sn": uuid})
+        self.cursor = len(self.poco_pool) - 1
+
+    def __call__(self, name=None, **kw) -> UIObjectProxy:
+        return Poco.__call__(self=self.poco_pool[self.cursor]["poco"], name=name, **kw)
+
+    def __getattribute__(self, item):
+
+        if item in ["poco_pool", "cursor", "switch_to"]:
+            return object.__getattribute__(self, item)
+
+        return object.__getattribute__(self.poco_pool[self.cursor]["poco"], item)
+
+
+class PocoProxy(PocoMixin, AndroidUiautomationPoco, iosPoco):
+    """
+    统一代理Poco
+    """
+
+    def __init__(self, config: Config):
+        PocoMixin.__init__(self, config)
+
+

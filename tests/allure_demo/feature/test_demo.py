@@ -2,7 +2,7 @@ import allure
 
 from allure_commons.types import Severity
 
-from framework import logger
+from framework.utils import logger
 
 
 class TestDemo01:
@@ -14,9 +14,12 @@ class TestDemo01:
         """
         功能一中的第一个场景
         """
-        logger.info("就是测着玩的桀桀桀")
 
-        assert 1 == 1
+        with allure.step("做点儿正事"):
+            pass
+
+        with allure.step("做点儿正事"):
+            pass
 
     def test_allure_02(self):
 

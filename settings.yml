@@ -1,0 +1,15 @@
+# 系统配置
+# 本框架命名为 freckle
+
+freckle:
+  meta:
+    name: "UI-AutoTesting"
+    target: "android"
+  test:
+    mode:   # 模式 web、android、ios、win、mac
+    dist:   # 分布式模式  no、load、each
+    items:  # 执行的用例，多个用例用英文逗号隔开
+  report:
+    enable: "no"  # yes/no
+
+

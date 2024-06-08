@@ -10,14 +10,14 @@ from _pytest.python import Function
 from airtest.core.api import connect_device
 from xdist import is_xdist_master, is_xdist_worker
 
-from framework import TMPDIR, REPORT, ALLURE, ALLURE_WIN, WORKDIR
 from framework.log import logger
-from framework.mixin import AndroidPoco, ApplePoco
 from framework.report import improve_report
+from framework.schedule import IosProxy
+from framework import TMPDIR, REPORT, ALLURE, ALLURE_WIN, WORKDIR
 
 
 def pytest_addoption(parser):
-    parser.addoption("--uri", action="store", default="Android:///")
+    parser.addoption("--devs", action="append", default=["Android:///", "iOS:///127.0.0.1:8190/?udid=00008101-00112CCA3AE0001E"])
     parser.addoption("--app", action="store", default="com.demo.demo")
 
 
@@ -86,7 +86,7 @@ def pytest_sessionfinish(session, exitstatus):
             os.system(f"{ALLURE} generate {TMPDIR} -o {REPORT} --clean")
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture(autouse=True)
 def device(pytestconfig):
     """
     设备连接
@@ -94,48 +94,7 @@ def device(pytestconfig):
     :return:
     """
 
-    dev = connect_device(pytestconfig.getoption("uri"))
+    poco = IosProxy(pytestconfig)
 
-    return dev
+    poco(name="企业微信").click()
 
-
-@pytest.fixture(scope="session")
-def poco(device, pytestconfig):
-    """
-    init poco
-    :param device:
-    :param pytestconfig:
-    :return:
-    """
-
-    # 根据os来创建对应的poco
-    os = device.__class__.__name__.lower()
-
-    if os == "android":
-        poco = AndroidPoco(config=pytestconfig,
-                           device=device,
-                           screenshot_each_action=False,
-                           use_airtest_input=True,
-                           pre_action_wait_for_appearance=10)
-    elif os == "ios":
-        poco = ApplePoco(config=pytestconfig, device=device, pre_action_wait_for_appearance=10)
-    else:
-        raise RuntimeError("不支持的设备及操作系统")
-
-    # 启动app
-    poco.device.start_app(poco.config.getoption("app"))
-
-    yield poco
-
-    # 停止app
-    poco.device.stop_app(poco.config.getoption("app"))
-
-
-def _(session):
-    if is_xdist_master(session):
-        os.environ.setdefault("honey", "12346")
-
-    if is_xdist_worker(session):
-        logger.info(os.environ.get("honey"))
-        with open(f"{random.randint(1, 100)}.txt", "w") as f:
-            f.write(os.environ.get("honey"))
