@@ -464,7 +464,7 @@ select.first_selected_option() # 选择第一个option选项；
 
 #### tidevice
 
-在实际测试工程中，测试设备通常在机房统一管理，但是从前面WDA安装过程可以看到，我们需要使用xcode来启动WDA，这样就失去了自动化测试的意义。出于这样的需求，阿里开源了1个用来做iOS自动化的工具-- tidevice ，官称该工具能实现 **不依赖 xcode 启动 WebDriverAgent** 完成设备连接。
+在实际测试工程中，测试设备通常在机房统一管理，但是从前面WDA安装过程可以看到，我们需要使用xcode来启动WDA，这样就失去了自动化测试的意义。出于这样的需求，阿里开源了1个用来做iOS自动化的工具-- tidevice （taobao-iphone-device），官称该工具能实现 **不依赖 xcode 启动 WebDriverAgent** 完成设备连接。
 
 > iOS 16的手机需要手工开启开发者选项。 
 >

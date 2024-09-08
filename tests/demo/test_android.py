@@ -71,7 +71,3 @@ def test_app_resource(poco):
 
     poco.logger.info(f"cpu使用率: {metric[8]}")
     poco.logger.info(f"内存使用率: {metric[9]}")
-
-
-def test_demo1():
-    assert 1==1

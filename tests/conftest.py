@@ -10,10 +10,9 @@ from _pytest.python import Function
 from airtest.core.api import connect_device
 from xdist import is_xdist_master, is_xdist_worker
 
-from framework.log import logger
+from framework import workdir
+from framework.proxy import PocoProxy
 from framework.report import improve_report
-from framework.schedule import IosProxy
-from framework import TMPDIR, REPORT, ALLURE, ALLURE_WIN, WORKDIR
 
 
 def pytest_addoption(parser):
@@ -29,6 +28,7 @@ def pytest_configure(config):
     """
 
     # 检查日志目录
+    # TODO 以下变量应该通过settings来配置使用
     if not os.path.exists(TMPDIR):
         os.makedirs(TMPDIR)
 
@@ -68,7 +68,7 @@ def pytest_pyfunc_call(pyfuncitem: Function):
     allure.dynamic.epic(project)
 
     # 添加附件
-    allure.attach.file(os.path.join(WORKDIR, "readme.md"), name="readme.md")
+    allure.attach.file(os.path.join(workdir, "readme.md"), name="readme.md")
 
 
 def pytest_sessionfinish(session, exitstatus):
@@ -80,21 +80,22 @@ def pytest_sessionfinish(session, exitstatus):
     # --clean 表示清楚原先的数据
     if is_xdist_master(session) and hasattr(session.config.option, "alluredir"):
         improve_report()
+        # TODO 以下变量应该通过settings来配置使用
         if "windows" in sys.platform.lower():
-            os.system(f"{ALLURE_WIN} generate {TMPDIR} -o {REPORT} --clean")
+            os.system(f"{ALLURE_WIN} generate --single-file {TMPDIR} -o {REPORT} --clean")
         else:
-            os.system(f"{ALLURE} generate {TMPDIR} -o {REPORT} --clean")
+            os.system(f"{ALLURE} generate --single-file {TMPDIR} -o {REPORT} --clean")
 
 
-@pytest.fixture(autouse=True)
-def device(pytestconfig):
+@pytest.fixture(scope="session", autouse=True)
+def poco(pytestconfig):
     """
     设备连接
     :param pytestconfig:
     :return:
     """
 
-    poco = IosProxy(pytestconfig)
+    poco = PocoProxy(pytestconfig)
+    poco.use(os=pytestconfig.getoption("meta.target"))
 
-    poco(name="企业微信").click()
-
+    return poco

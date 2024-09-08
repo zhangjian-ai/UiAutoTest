@@ -1,9 +1,11 @@
-from airtest.utils.snippet import parse_device_uri
 from poco.pocofw import Poco
+from airtest.core.ios import IOS
 from _pytest.config import Config
 from poco.proxy import UIObjectProxy
 from poco.drivers.ios import iosPoco
+from airtest.core.android import Android
 from airtest.core.api import connect_device
+from airtest.utils.snippet import parse_device_uri
 from poco.drivers.android.uiautomation import AndroidUiautomationPoco
 
 from framework.schedule import Node
@@ -77,7 +79,10 @@ class PocoMixin:
         # node  负责和manager控制节点通信，来获取某个设备的使用权
         self.node = Node(config=config)
 
-    def switch_to(self, os: str = None, sn: str = None):
+        self.device: Android = ...
+        self.ios_device: IOS = ...
+
+    def use(self, os: str = None, sn: str = None):
         """
         持有目标设备
         需要注意的时，使用本代理之前，必须先调用本方法

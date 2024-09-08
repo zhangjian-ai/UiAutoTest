@@ -9,7 +9,10 @@ freckle:
     mode:   # 模式 web、android、ios、win、mac
     dist:   # 分布式模式  no、load、each
     items:  # 执行的用例，多个用例用英文逗号隔开
+    mark:   # 同pytest的 -m 参数
   report:
     enable: "no"  # yes/no
+    tmp_dir: "allure/output"
+    dst_dir: "allure/report"
 
 
