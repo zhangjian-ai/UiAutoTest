@@ -456,7 +456,7 @@ select.first_selected_option() # 选择第一个option选项；
 
 9. 成功启动WDA后，就可以在同一网段访问到WDA启动的代理服务，在xcode启动的WDA，在控制台就可以看到链接地址
 
-   <img src="./_static/images/ui_test01.png" style="width:75%;float: left">
+   <img src="./resource/images/ui_test01.png" style="width:75%;float: left">
 
 10. 至此，WebDriverAgent 就安装完成了
 
@@ -563,17 +563,23 @@ select.first_selected_option() # 选择第一个option选项；
 
   使用 AirtestIDE 就可以成功连接到设备:
 
-  <img src="./_static/images/ui_test02.png" style="width:60%;float: left">
+  <img src="./resource/images/ui_test02.png" style="width:60%;float: left">
 
   
 
   
 
-  
+#### pymobiledevice3
 
-  
+pymobiledevice3 是一个纯 Python3 实现，用于与 iDevices（如 iPhone 等）互动的工具。这意味着该工具既与架构无关也与平台无关，并在以下系统上得到支持和测试：
 
-  
+- Windows
+- Linux
+- macOS
+
+
+
+此处不过多介绍，这是一个开源的工具。
 
 
 

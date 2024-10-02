@@ -29,11 +29,13 @@ def pytest_configure(config):
 
     # 检查日志目录
     # TODO 以下变量应该通过settings来配置使用
-    if not os.path.exists(TMPDIR):
-        os.makedirs(TMPDIR)
+    tmp_dir = config.get("report.tmp_dir")
+    if not os.path.exists(tmp_dir):
+        os.makedirs(tmp_dir)
 
-    if not os.path.exists(REPORT):
-        os.makedirs(REPORT)
+    dst_dir = config.get("report.dst_dir")
+    if not os.path.exists(dst_dir):
+        os.makedirs(dst_dir)
 
 
 def pytest_pyfunc_call(pyfuncitem: Function):
