@@ -76,7 +76,7 @@ class PocoMixin:
         # poco-pool
         self.poco_pool = []
 
-        # node  负责和manager控制节点通信，来获取某个设备的使用权
+        # node负责和manager控制节点通信，来获取某个设备的使用权
         self.node = Node(config=config)
 
         self.device: Android = ...
@@ -125,7 +125,7 @@ class PocoMixin:
 
     def __getattribute__(self, item):
 
-        if item in ["poco_pool", "cursor", "switch_to"]:
+        if item in ["poco_pool", "cursor", "use", "node"]:
             return object.__getattribute__(self, item)
 
         return object.__getattribute__(self.poco_pool[self.cursor]["poco"], item)
