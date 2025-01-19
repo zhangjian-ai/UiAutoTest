@@ -7,10 +7,9 @@ import importlib
 
 from _pytest.main import Session
 from _pytest.python import Function
-from airtest.core.api import connect_device
 from xdist import is_xdist_master, is_xdist_worker
 
-from framework import workdir
+from framework import workdir, settings
 from framework.proxy import PocoProxy
 from framework.report import improve_report
 
@@ -70,10 +69,10 @@ def pytest_pyfunc_call(pyfuncitem: Function):
     allure.dynamic.epic(project)
 
     # 添加附件
-    allure.attach.file(os.path.join(workdir, "readme.md"), name="readme.md")
+    # allure.attach.file(os.path.join(workdir, "readme.md"), name="readme.md")
 
 
-def pytest_sessionfinish(session, exitstatus):
+def pytest_sessionfinish(session: Session, exitstatus):
     """
     测试结束时的勾子
     """
@@ -82,11 +81,11 @@ def pytest_sessionfinish(session, exitstatus):
     # --clean 表示清楚原先的数据
     if is_xdist_master(session) and hasattr(session.config.option, "alluredir"):
         improve_report()
-        # TODO 以下变量应该通过settings来配置使用
+        args = f"generate --single-file {settings['report']['tmp_dir']} -o {settings['report']['dst_dir']} --clean"
         if "windows" in sys.platform.lower():
-            os.system(f"{ALLURE_WIN} generate --single-file {TMPDIR} -o {REPORT} --clean")
+            os.system(f"{settings['report']['win_cmd']} {args}")
         else:
-            os.system(f"{ALLURE} generate --single-file {TMPDIR} -o {REPORT} --clean")
+            os.system(f"{settings['report']['win_cmd']} {args}")
 
 
 @pytest.fixture(scope="session", autouse=True)
@@ -98,6 +97,6 @@ def poco(pytestconfig):
     """
 
     poco = PocoProxy(pytestconfig)
-    poco.use(os=pytestconfig.getoption("meta.target"))
+    poco.switch(os=pytestconfig.getoption("meta.target"))
 
     return poco

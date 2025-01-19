@@ -8,7 +8,7 @@ from airtest.core.api import connect_device
 from airtest.utils.snippet import parse_device_uri
 from poco.drivers.android.uiautomation import AndroidUiautomationPoco
 
-from framework.schedule import Node
+from framework.dispatch import Node
 
 
 class ElementProxy:
@@ -38,8 +38,6 @@ class ElementProxy:
         """
         允许用户直接调用元素代理
         如果是坐标，则返回
-        :param poco:
-        :return:
         """
 
         if self.name or self.text:
@@ -50,8 +48,6 @@ class ElementProxy:
     def click(self, poco: Poco):
         """
         单次点击操作
-        :param poco:
-        :return:
         """
 
         if self.name or self.text:
@@ -61,13 +57,32 @@ class ElementProxy:
         width, height = poco.get_screen_size()
         poco.click((self.coordinate[0] / width, self.coordinate[1] / height))
 
-    # TODO 扩展其他元素操作方法
+    # TODO 扩展实现其他元素方法
+    def double_click(self, poco: Poco):
+        ...
+
+    def swipe(self, poco: Poco, dest: tuple, duration=0.5):
+        ...
+
+    def exists(self, poco: Poco):
+        ...
+
+    def wait_for_appearance(self, poco: Poco, timeout=120):
+        ...
+
+    def wait_for_disappearance(self, poco: Poco, timeout=120):
+        ...
 
 
 class PocoMixin:
     """
     poco扩展类
     """
+
+    class IOSPoco(iosPoco):
+        def __init__(self, device=None, **kwargs):
+            super(PocoMixin.IOSPoco, self).__init__(device, **kwargs)
+            self.device = self.ios_device = device
 
     def __init__(self, config: Config):
         # 游标。表示当前设备对应poco实例在 poco-pool 中的索引
@@ -82,13 +97,12 @@ class PocoMixin:
         self.device: Android = ...
         self.ios_device: IOS = ...
 
-    def use(self, os: str = None, sn: str = None):
+    def switch(self, os: str = None, sn: str = None):
         """
-        持有目标设备
+        切换设备
         需要注意的时，使用本代理之前，必须先调用本方法
         :param os: 系统 android/ios/win/mac
         :param sn: 设备序列号
-        :return: None
         """
 
         if not os and not sn:
@@ -113,7 +127,7 @@ class PocoMixin:
                                            use_airtest_input=True,
                                            pre_action_wait_for_appearance=10)
         elif os == "ios":
-            poco = iosPoco(device=connect_device(uri), pre_action_wait_for_appearance=10)
+            poco = self.IOSPoco(device=connect_device(uri), pre_action_wait_for_appearance=10)
         else:
             raise RuntimeError("不支持的设备及操作系统")
 
@@ -125,7 +139,7 @@ class PocoMixin:
 
     def __getattribute__(self, item):
 
-        if item in ["poco_pool", "cursor", "use", "node"]:
+        if item in ["poco_pool", "cursor", "switch", "node"]:
             return object.__getattribute__(self, item)
 
         return object.__getattribute__(self.poco_pool[self.cursor]["poco"], item)
@@ -138,5 +152,3 @@ class PocoProxy(PocoMixin, AndroidUiautomationPoco, iosPoco):
 
     def __init__(self, config: Config):
         PocoMixin.__init__(self, config)
-
-

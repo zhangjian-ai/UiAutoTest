@@ -14,5 +14,8 @@ freckle:
     enable: "no"  # yes/no
     tmp_dir: "allure/output"
     dst_dir: "allure/report"
+    win_cmd: "allure/bin/allure.bat"
+    lux_cmd: "allure/bin/allure"
+
 
 
