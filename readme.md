@@ -585,11 +585,131 @@ pymobiledevice3 是一个纯 Python3 实现，用于与 iDevices（如 iPhone �
 
 
 
+### 图像识别
+
+在Airtest中除了通过控件定位元素以外，最值得一提的就是OCR图像识别，在没法通过控件操作元素时，通过图像识别获取元素坐标并实现对应操作。
+
+下面来分析一下其中的实现过程，其核心在于Template类，查找目标图片在当前屏幕上的位置坐标。下面看下其类结构：
+
+<img src="./resource/images/ui_test03.png" style="width:45%;float: left">
 
 
 
+1. 从 match_in 方法入手，从下面源码可以看出，其核心在于 _cv_match 方法
+
+   ```python
+       def match_in(self, screen):
+           match_result = self._cv_match(screen)
+           G.LOGGING.debug("match result: %s", match_result)
+           if not match_result:
+               return None
+           focus_pos = TargetPos().getXY(match_result, self.target_pos)
+           return focus_pos
+   ```
+
+2. _cv_match 方法源码如下：
+
+   ```python
+       @logwrap
+       def _cv_match(self, screen):
+           # 底层就是使用openCV库，读取图片信息，并且将目标图片进行缩放，方便识别
+           ori_image = self._imread()
+           image = self._resize_image(ori_image, screen, ST.RESIZE_METHOD)
+           ret = None
+           for method in ST.CVSTRATEGY:
+               # get function definition and execute:
+               func = MATCHING_METHODS.get(method, None)
+               if func is None:
+                   raise InvalidMatchingMethodError("Undefined method in CVSTRATEGY: '%s', try 'kaze'/'brisk'/'akaze'/'orb'/'surf'/'sift'/'brief' instead." % method)
+               else:
+                 	# 最后在 _try_match 中进行识别
+                   if method in ["mstpl", "gmstpl"]:
+                       ret = self._try_match(func, ori_image, screen, threshold=self.threshold, rgb=self.rgb, record_pos=self.record_pos,
+                                               resolution=self.resolution, scale_max=self.scale_max, scale_step=self.scale_step)
+                   else:
+                       ret = self._try_match(func, image, screen, threshold=self.threshold, rgb=self.rgb)
+               if ret:
+                   break
+           return ret
+   ```
+
+3. _try_match 源码比较简单
+
+   ```python
+       @staticmethod
+       def _try_match(func, *args, **kwargs):
+           G.LOGGING.debug("try match with %s" % func.__name__)
+           try:
+               ret = func(*args, **kwargs).find_best_result()
+           except aircv.NoModuleError as err:
+               G.LOGGING.warning("'surf'/'sift'/'brief' is in opencv-contrib module. You can use 'tpl'/'kaze'/'brisk'/'akaze'/'orb' in CVSTRATEGY, or reinstall opencv with the contrib module.")
+               return None
+           except aircv.BaseError as err:
+               G.LOGGING.debug(repr(err))
+               return None
+           else:
+               return ret
+   ```
+
+4. 继续跟进 find_best_result 方法，这里TemplateMatching中的该方法
+
+   ```python
+       @print_run_time
+       def find_best_result(self):
+           """基于kaze进行图像识别，只筛选出最优区域."""
+           """函数功能：找到最优结果."""
+           # 第一步：校验图像输入 im_source 是屏幕截图；im_search 则是目标图片
+           check_source_larger_than_search(self.im_source, self.im_search)
+           # 第二步：计算模板匹配的结果矩阵res
+           # 本质上就是通过将两个图片都灰度化处理后，使用openCV 的matchTemplate方法找出与目标图片最匹配的部分
+           res = self._get_template_result_matrix()
+           # 第三步：就是获取最佳匹配的位置
+           # 返回 最小值、最大值、最小匹配区域的左上坐标、最大匹配区域的左上坐标
+           # 最大值最小值可以理解为匹配区域与原图的相似度，也就是距离
+           min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(res)
+           # 获取目标图片的高和宽
+           h, w = self.im_search.shape[:2]
+           # 求取可信度
+           confidence = self._get_confidence_from_matrix(max_loc, max_val, w, h)
+           # 求取识别位置: 目标中心 + 目标区域:
+           # middle_point 市中心位置坐标，rectangle 是截图上匹配区域的四个点，点序:左上->左下->右下->右上
+           middle_point, rectangle = self._get_target_rectangle(max_loc, w, h)
+           best_match = generate_result(middle_point, rectangle, confidence)
+           LOGGING.debug("[%s] threshold=%s, result=%s" % (self.METHOD_NAME, self.threshold, best_match))
+   				
+           # 可信度达到阈值就返回结果
+           return best_match if confidence >= self.threshold else None
+   ```
+
+5. 在上一步已经获得了匹配结果，在第一部中还有一个 TargetPos().getXY() 方法的调用，这个很简单，就是把匹配区域的中间坐标位置返回回来了。
 
 
+
+示例，找出下面小图在大图中的位置。
+
+<img src="./resource/images/ui_test05.png" style="width:10%;float: left">
+
+<img src="./resource/images/ui_test04.png" style="width:40%;float: left">
+
+
+
+直接使用Airtest的Template类完成位置查找：
+
+```python
+from airtest import aircv
+from airtest.core.cv import Template
+
+# 创建模板
+t = Template("../../resource/images/ui_test05.png")
+
+# 截屏图片，需要先read为图片对象
+# 本质还是openCV读取图片
+screen = aircv.imread("../../resource/images/ui_test04.png")
+
+pos = t.match_in(screen)
+
+print(pos)  # (487, 752)
+```
 
 
 
