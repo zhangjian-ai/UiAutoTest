@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>对话框示例</title>
+</head>
+<body>
+<div class="button-container">
+    <button id="alert" onclick="showAlert()">显示 Alert</button>
+    <button id="confirm" onclick="showConfirm()">显示 Confirm</button>
+    <button id="prompt" onclick="showPrompt()">显示 Prompt</button>
+</div>
+<script>
+    function showAlert() {
+        alert("这是一个警告对话框！");
+    }
+    function showConfirm() {
+        const result = confirm("这是一个确认对话框，您确定要继续吗？");
+    }
+    function showPrompt() {
+        const name = prompt("请输入您的名字：", "张三");
+    }
+</script>
+</body>
+</html>
