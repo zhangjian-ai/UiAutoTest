@@ -1784,7 +1784,7 @@ Depending on the hardware and nature of your tests, you can set `numprocesses` t
 
   上面启动的wda必须要求测试脚本运行所在的网络与设备网络在同一个网段，才能访问到设备上的代理服务，使用起来就不太方便。
 
-  因此，再介绍一个启动方式，这个方式会在当前执行tidevice命令的机器上再提供一个代理服务（当前操作系统代理设备上的代理服务），并且可以指定端口号，这使得测试脚本无需关心设备代理服务的访问地址，就可以使用 localhost 操作设备:
+  因此，再介绍一个启动方式，这个方式会在当前执行tidevice命令的机器上再提供一个代理服务（当前设备直接代理ios移动设备），并且可以指定端口号，这样本机就可以使用 localhost 操作设备，当然其他测试环境也可以通过代理机器的IP远程访问设备:
 
   ```shell
   % tidevice wdaproxy -B com.xxx.WebDriverAgentRunner.xctrunner --port 8190
