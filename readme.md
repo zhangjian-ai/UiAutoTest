@@ -1645,6 +1645,8 @@ Depending on the hardware and nature of your tests, you can set `numprocesses` t
 
 
 
+#### ADB
+
 ADB工具是强有力的调试工具，但日常使用较多基本就是 adb-client 相关的功能，比如 shell、install、uninstall 等等，但其实adb同样有server能力，默认情况下，电脑连接设备后，我们输入`adb devices`后，其实就是启动了一个端口为5307端口的设备管理服务，是的我们可以操作设备。下面介绍一下有价值的ADB服务应用。
 
 1. 修改默认端口
@@ -1706,8 +1708,14 @@ ADB工具是强有力的调试工具，但日常使用较多基本就是 adb-cli
       ```shell
       adb connect ADB服务的IP:20008
       ```
-
-
+   
+   5. 在adb服务机器上，我们可以使用如下命令，查看哪些移动设备在被代理转发
+   
+      ```shell
+      adb -P 5388 forward --list
+      ```
+   
+      
 
 ### IOS
 
