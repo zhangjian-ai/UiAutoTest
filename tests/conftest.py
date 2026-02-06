@@ -41,7 +41,6 @@ def pytest_pyfunc_call(pyfuncitem: Function):
     """
     动态写入用例信息
     :param pyfuncitem:
-    :return:
     """
     # 用例名称
     func = pyfuncitem.function
@@ -93,7 +92,6 @@ def poco(pytestconfig):
     """
     设备连接
     :param pytestconfig:
-    :return:
     """
 
     poco = PocoProxy(pytestconfig)

@@ -1,14 +1,19 @@
+from airtest.core.helper import G
+from hmdriver2._uiobject import UiObject
+from hmdriver2.driver import Driver
 from poco.pocofw import Poco
 from airtest.core.ios import IOS
 from _pytest.config import Config
 from poco.proxy import UIObjectProxy
 from poco.drivers.ios import iosPoco
 from airtest.core.android import Android
-from airtest.core.api import connect_device
+from airtest.core.api import connect_device, init_device
 from airtest.utils.snippet import parse_device_uri
+from typing import Optional, Union, TYPE_CHECKING
 from poco.drivers.android.uiautomation import AndroidUiautomationPoco
 
-from framework.dispatch import Node
+from framework.dispatch import Worker
+from framework.ext import remote_ext
 
 
 class ElementProxy:
@@ -74,81 +79,199 @@ class ElementProxy:
         ...
 
 
+class IosPocoProxy(iosPoco):
+    def __init__(self, device=None, **kwargs):
+        self.device = device
+        super(IosPocoProxy, self).__init__(device=device, **kwargs)
+
+
+class HarmonyPocoProxy(Driver):
+
+    def __init__(self, serial: Optional[str] = None):
+        super(HarmonyPocoProxy, self).__init__(serial)
+        self.device = self
+
+
 class PocoMixin:
     """
-    poco扩展类
+    poco 代理扩展类
     """
 
-    class IOSPoco(iosPoco):
-        def __init__(self, device=None, **kwargs):
-            super(PocoMixin.IOSPoco, self).__init__(device, **kwargs)
-            self.device = self.ios_device = device
-
     def __init__(self, config: Config):
-        # 游标。表示当前设备对应poco实例在 poco-pool 中的索引
-        self.cursor = 0
+        self.config = config
 
-        # poco-pool
+        # 测试平台类型
+        self.platform = config.getoption("test.platform")
+
+        # device manage proxy
+        self.worker = Worker(config, config.getoption("test.uris").split(","))
+
+        # 游标。表征代理类当前代理的是哪个具体的poco
+        self.cursor = 0
         self.poco_pool = []
 
-        # node负责和manager控制节点通信，来获取某个设备的使用权
-        self.node = Node(config=config)
+        # 没有实际意义，就图一个方便
+        self.device: Union[Android, IOS, Driver] = ...
 
-        self.device: Android = ...
-        self.ios_device: IOS = ...
+    def __call__(self, name=None, **kw) -> Union[UIObjectProxy, UiObject]:
+        poco = self.poco_pool[self.cursor]
+        if poco["os"] == "harmony":
+            if name:
+                kw["id"] = name
 
-    def switch(self, os: str = None, sn: str = None):
+            return Driver.__call__(self=poco["poco"], **kw)
+        else:
+            return Poco.__call__(self=poco["poco"], name=name, **kw)
+
+    def __getattribute__(self, item):
+        if item in ["cursor", "poco_pool", "_build_poco", "worker", "switch_to", "release", "config",
+                    "device_info", "platform"]:
+            return object.__getattribute__(self, item)
+
+        try:
+            return object.__getattribute__(self.poco_pool[self.cursor]["poco"], item)
+        except AttributeError:
+            raise RuntimeError(f"{self.poco_pool[self.cursor]['poco'].__class__} 没有属性: {item}")
+
+    def _build_poco(self, uri):
+        """
+        创建设备连接及poco实例
+        :param uri: 设备连接信息
+        """
+        try:
+            # 解析连接信息并创建链接
+            platform, uuid, params = parse_device_uri(uri)
+
+            if platform.lower() == "android":
+                device = init_device(platform, uuid, **params)
+                poco = AndroidUiautomationPoco(device=device, screenshot_each_action=False,
+                                               use_airtest_input=True, pre_action_wait_for_appearance=6)
+            elif platform.lower() == "ios":
+                device = init_device(platform, uuid, **params)
+                poco = IosPocoProxy(device=device, pre_action_wait_for_appearance=6)
+
+            elif platform.lower() == "harmony":
+                if params.get("host"):
+                    host, port = params.get("host")
+                    remote_ext(host, port)
+
+                poco = HarmonyPocoProxy(uuid or None)
+
+            else:
+                raise RuntimeError(f"暂不支持的设备类型: {platform}")
+
+        except Exception as e:
+            raise RuntimeError(str(e))
+        else:
+            self.poco_pool.append({"os": platform.lower(), "sn": uuid, "poco": poco})
+
+    def switch_to(self, os: str = None, sn: str = None):
         """
         切换设备
-        需要注意的时，使用本代理之前，必须先调用本方法
-        :param os: 系统 android/ios/win/mac
-        :param sn: 设备序列号
         """
 
         if not os and not sn:
-            raise RuntimeError("可选参数必须提供一个: os sn")
+            raise RuntimeError("您总得给一个参数不是~")
 
-        # 先看是否已经持有了目标设备
-        for i, poco in enumerate(self.poco_pool):
-            if poco["sn"] == sn or poco["os"] == os:
-                self.cursor = i
+        # 优先处理sn
+        if sn:
+            sn_list = [p["sn"] for p in self.poco_pool]
+            if sn in sn_list:
+                self.cursor = sn_list.index(sn)
+                G.DEVICE = self.poco_pool[self.cursor]["poco"].device
                 return
-
-        # 如果当前没有设备就通过 node 获取一个
-        uri = self.node.hold(os=os, sn=sn)
-
-        # 创建poco并保存
-        platform, uuid, params = parse_device_uri(uri)
-        platform = platform.lower()
-
-        if platform == "android":
-            poco = AndroidUiautomationPoco(device=connect_device(uri),
-                                           screenshot_each_action=False,
-                                           use_airtest_input=True,
-                                           pre_action_wait_for_appearance=10)
-        elif os == "ios":
-            poco = self.IOSPoco(device=connect_device(uri), pre_action_wait_for_appearance=10)
+            uri = self.worker.hold(sn=sn)
         else:
-            raise RuntimeError("不支持的设备及操作系统")
+            for idx, poco in enumerate(self.poco_pool):
+                if poco["os"] == os:
+                    self.cursor = idx
+                    G.DEVICE = self.poco_pool[self.cursor]["poco"].device
+                    return
+            uri = self.worker.hold(os=os)
 
-        self.poco_pool.append({"poco": poco, "os": platform, "sn": uuid})
+        self._build_poco(uri)
         self.cursor = len(self.poco_pool) - 1
+        G.DEVICE = self.poco_pool[self.cursor]["poco"].device
 
-    def __call__(self, name=None, **kw) -> UIObjectProxy:
-        return Poco.__call__(self=self.poco_pool[self.cursor]["poco"], name=name, **kw)
+    def release(self, mode: str = ""):
+        """
+        释放设备连接
+        :param mode: finish 时，释放所有设备。其他值 时，保留 cursor = 0 处的设备
+        """
 
-    def __getattribute__(self, item):
+        retain = -1
 
-        if item in ["poco_pool", "cursor", "switch", "node"]:
-            return object.__getattribute__(self, item)
+        if mode == "finish":
+            retain = 0
+        elif self.worker.dist:
+            retain = 1
 
-        return object.__getattribute__(self.poco_pool[self.cursor]["poco"], item)
+        if retain != -1:
+            while len(self.poco_pool) > retain:
+                poco = self.poco_pool.pop()
+
+                # 鸿蒙设备释放时删除端口转发
+                if poco["os"] == "harmony":
+                    poco["poco"].device._client.release()
+
+                # 设备断连
+                if hasattr(poco["poco"].device, "disconnect"):
+                    getattr(poco["poco"].device, "disconnect")()
+
+                # 设备释放
+                self.worker.release(sn=poco["sn"])
+                del poco
+
+            # 如果测试结束同步关闭worker网络连接
+            if retain == 0:
+                self.worker.close()
+
+        # 不管怎样都回到0索引处
+        self.cursor = 0
+
+    @property
+    def device_info(self):
+        """
+        获取设备信息，如果有
+        """
+        current = self.poco_pool[self.cursor]
+
+        if "info" not in current:
+            if current["os"] == "android":
+                brand = current["poco"].device.shell("getprop ro.product.brand").strip()
+                model = current["poco"].device.shell("getprop ro.product.model").strip()
+                sn = current["poco"].device.shell("getprop ro.serialno").strip()
+
+                current["info"] = f"{brand} {model}[{sn}]"
+            elif current["os"] == "harmony":
+                brand = current["poco"].device.hdc.brand()
+                model = current["poco"].device.hdc.model()
+                sn = current["poco"].device.hdc.serial
+
+                current["info"] = f"{brand} {model}[{sn}]"
+            else:
+                info = current["poco"].device.device_info
+
+                current["info"] = f"{info['model']}[{info['uuid']}]"
+
+        return current
 
 
-class PocoProxy(PocoMixin, AndroidUiautomationPoco, iosPoco):
-    """
-    统一代理Poco
-    """
+if TYPE_CHECKING:
+    # 编码时：通过多继承使得IDE可以提示
+    class PocoProxy(PocoMixin, AndroidUiautomationPoco, iosPoco, Driver):
+        ...
 
-    def __init__(self, config: Config):
-        PocoMixin.__init__(self, config)
+else:
+    # 运行时：只继承PocoMixin，避免初始化冲突
+    class PocoProxy(PocoMixin):
+        """
+        poco 代理类
+        tips: 不要把我当做代理，我就是你想要的Poco
+        """
+
+        def __init__(self, config: Config):
+            PocoMixin.__init__(self, config)
+
+            # 把自己给config引用
+            config.option.__dict__["poco"] = self
