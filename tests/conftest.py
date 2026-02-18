@@ -9,8 +9,8 @@ from _pytest.main import Session
 from _pytest.python import Function
 from xdist import is_xdist_master, is_xdist_worker
 
-from framework import workdir, settings
-from framework.proxy import PocoProxy
+from framework import settings
+from framework.proxy import DeviceProxy
 from framework.report import improve_report
 
 
@@ -94,7 +94,7 @@ def poco(pytestconfig):
     :param pytestconfig:
     """
 
-    poco = PocoProxy(pytestconfig)
+    poco = DeviceProxy(pytestconfig)
     poco.switch(os=pytestconfig.getoption("meta.target"))
 
     return poco

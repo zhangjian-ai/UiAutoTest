@@ -29,6 +29,7 @@ class _PortForwarder:
             return
         self.running = True
         self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        # 设置TCP层端口服用，在程序重启时，端口不会立即释放，为了能保证重启是继续使用端口
         self.server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.server_socket.bind(('0.0.0.0', self.port))
         self.server_socket.listen(5)
@@ -91,11 +92,7 @@ class _PortForwarder:
 
 class HdcPortForwardDaemon:
     """
-    hdc 端口转发守护进程
-
-    定时执行 `hdc fport ls`，自动感知端口变化：
-    - 新增的端口 → 创建 socket 转发（0.0.0.0:port -> 127.0.0.1:port）
-    - 消失的端口 → 销毁对应的 socket 转发
+    hdc 端口转发守护进程，将网络端口转发至本地端口
     """
 
     def __init__(self, interval: float = 2.0):
@@ -181,13 +178,12 @@ class HdcPortForwardDaemon:
 
 
 if __name__ == "__main__":
-
     daemon = HdcPortForwardDaemon()
     daemon.start()
 
     logger.info("守护进程已启动，自动监听 hdc fport 端口变化，按 Ctrl+C 停止...")
     try:
         while True:
-            time.sleep(10)
+            time.sleep(5)
     except KeyboardInterrupt:
         daemon.stop()
